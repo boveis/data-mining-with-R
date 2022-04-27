@@ -1,0 +1,446 @@
+---
+title: "fase2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r cars}
+dt<- read.csv(file = 'lyon_housing.csv')
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+
+
+sum(is.na(dt$date_transaction))
+sum(is.na(dt$type_purchase))
+sum(is.na(dt$type_property))
+sum(is.na(dt$rooms_count))
+sum(is.na(dt$surface_housing))
+sum(is.na(dt$surface_effective_usable))
+sum(is.na(dt$surface_terrain))
+sum(is.na(dt$parkings_count))
+sum(is.na(dt$price))
+sum(is.na(dt$address))
+sum(is.na(dt$district))
+sum(is.na(dt$latitude))
+sum(is.na(dt$longitude))
+sum(is.na(dt$date_construction))
+```
+
+
+```{r}
+library(tidyr)
+
+dt <- dt %>% drop_na(latitude , longitude)
+
+sum(is.na(dt$latitude))
+sum(is.na(dt$longitude))
+
+```
+
+
+
+
+```{r}
+mframe = select(dt, surface_housing, surface_effective_usable)
+mframe = filter(mframe , dt$surface_effective_usable>0)
+mframe = mutate(mframe, sub = surface_housing - surface_effective_usable )
+mframe$sub = abs(mframe$sub)
+mean(mframe$sub)
+dt = dt[,-6]
+
+```
+
+
+
+
+```{r}
+row_to_remove = which(dt$type_property == "appartement" & dt$surface_terrain>0)
+dt = dt[-row_to_remove , ]
+
+```
+
+
+```{r}
+dt$date_construction = as.POSIXct(dt$date_construction , format  = "%Y/%m/%d")
+dt$date_transaction = as.POSIXct(dt$date_transaction , format  = "%Y/%m/%d")
+y1 = format(dt$date_transaction , format = "%y")
+y2 = format(dt$date_construction , format = "%y")
+m1 = format(dt$date_transaction , format = "%m")
+m2 = format(dt$date_construction , format = "%m")
+d1 = format(dt$date_transaction , format = "%d")
+d2 = format(dt$date_construction , format = "%d")
+
+y <- data.frame(y1,y2)
+y$y1= as.numeric(y$y1)
+y$y2= as.numeric(y$y2)
+y$y1= y$y1+2000
+y$y2[y$y2>30] = y$y2[y$y2>30]+1900
+y$y2[y$y2<30] = y$y2[y$y2<30]+2000
+
+y$y1 = format(y$y1 , format = "%y")
+y$y2 = format(y$y2 , format = "%y")
+dt$date_transaction <- as.Date(with(dt,paste(y$y1,m1,d1,sep="-")),"%Y-%m-%d")
+dt$date_construction <- as.Date(with(dt,paste(y$y2,m2,d2,sep="-")),"%Y-%m-%d")
+dt = mutate(dt , year_of_transaction = as.numeric(y$y1) , month_of_transaction = as.numeric(m1) )
+dt = mutate(dt ,wait = as.numeric(difftime(dt$date_transaction , dt$date_construction, units = "days")))
+dt$wait=as.numeric(dt$wait)
+
+```
+
+ #hitogram
+
+
+
+
+```{r}
+dt$type_purchase = as.factor(dt$type_purchase)
+mytable <- table(dt$type_purchase)
+mytable =  round(100*mytable/sum(mytable), 1)
+lbls <- paste(names(mytable), "\n", mytable,"%", sep="")
+pie(mytable, labels = lbls, col = rainbow(length(mytable)),
+   main="Pie Chart of type_purchase \n (with sample sizes)" ) 
+
+
+```
+
+
+
+
+```{r}
+dt$type_property = as.factor(dt$type_property)
+mytable <- table(dt$type_property)
+mytable =  round(100*mytable/sum(mytable), 1)
+lbls <- paste(names(mytable), "\n", mytable,"%", sep="")
+pie(mytable, labels = lbls, col = rainbow(length(mytable)),
+   main="Pie Chart of type_property \n (with sample sizes)" ) 
+
+```
+
+```{r}
+dt$rooms_count = as.factor(dt$rooms_count)
+mytable <- table(dt$rooms_count)
+mytable =  round(100*mytable/sum(mytable), 1)
+lbls <- paste(names(mytable), "\n", mytable,"%", sep="")
+pie(mytable, labels = lbls, col = rainbow(length(mytable)),
+   main="Pie Chart of room_count \n (with sample sizes)" ) 
+
+dt$rooms_count = as.numeric(dt$rooms_count)
+avrage_roomcount  = mean(dt$rooms_count)
+avrage_roomcount
+```
+
+```{r}
+hist(dt$surface_housing)
+mn = mean(dt$surface_housing)
+mn 
+
+```
+
+
+
+```{r}
+t = filter(dt , dt$surface_terrain!=0)
+hist(t$surface_terrain)
+
+mn = mean(t$surface_terrain)
+mn
+```
+
+
+
+
+
+
+```{r}
+dt$year_of_transaction = as.factor(dt$year_of_transaction)
+p_of_year = ggplot(data.frame(dt), aes(x=year_of_transaction)) +
+  geom_bar()
+p_of_year
+
+
+```
+
+```{r}
+
+
+
+dt$month_of_transaction = as.factor(dt$month_of_transaction)
+p_of_month = ggplot(data.frame(dt), aes(x=month_of_transaction)) +
+  geom_bar()
+p_of_month
+
+```
+
+
+
+
+
+
+
+
+```{r}
+
+
+dt$district = as.factor(dt$district)
+mytable <- table(dt$district)
+mytable =  round(100*mytable/sum(mytable), 1)
+lbls <- paste(names(mytable), "\n", mytable,"%", sep="")
+pie(mytable, labels = lbls, col = rainbow(length(mytable)),
+   main="Pie Chart of district \n (with sample sizes)" ) 
+
+```
+```{r}
+hist(dt$price)
+
+mn = mean(dt$price)
+mn
+
+```
+
+```{r}
+
+summary(dt$date_construction)
+```
+
+
+
+
+
+#next_part
+
+
+```{r}
+mframe = select(dt , price , year_of_transaction)
+d=group_by(mframe , year_of_transaction)
+da<-data.frame(summarize(d , mean_of_price=mean(price)))
+p<-ggplot(data=da, aes(x=year_of_transaction, y=mean_of_price)) +
+  geom_bar(stat="identity")
+p+ylab("avarage of price in each year")
+```
+
+```{r}
+mframe = select(dt , price , district)
+d=group_by(mframe , district)
+da<-data.frame(summarize(d , mean_of_price=mean(price)))
+da$district = as.vector(da$district)
+da[1:9 ,1 ] = c("	Lyon 1e" ,"	Lyon 2e" ,"	Lyon 3e" ,"	Lyon 4e" ,"	Lyon 5e" ,"	Lyon 6e" ,"	Lyon 7e" ,"	Lyon 8e" ,"	Lyon 9e" )
+
+p<-ggplot(data=da, aes(x=district, y=mean_of_price)) +
+  geom_bar(stat="identity")
+p+ylab("avarage of price in each district")
+```
+
+
+
+
+```{r}
+library(ggmap)
+border <- c(
+  left=min(dt$longitude),
+  bottom = min(dt$latitude),
+  right = max(dt$longitude),
+  top = max(dt$latitude)
+)
+
+map <- get_stamenmap(
+  bbox = border,
+  maptype = "terrain",
+  zoom = 9
+)
+
+```
+
+```{r}
+lower_mean = filter(dt , dt$price<mean(dt$price))
+higher_mean = filter(dt , dt$price>mean(dt$price))
+
+ggmap(map)+
+  geom_point(
+    data = dt,
+    mapping = aes(x = longitude, y = latitude, color = price)
+  )+scale_color_gradient(low="blue", high="red")
+ggmap(map)+
+  geom_point(
+    data = lower_mean,
+    mapping = aes(x = longitude, y = latitude),
+    color='darkblue'
+  )+ggtitle("lower price")
+ggmap(map)+
+  geom_point(
+    data = higher_mean,
+    mapping = aes(x = longitude, y = latitude),
+    color='darkblue',
+  )+ggtitle("higher price")
+
+
+
+```
+```{r}
+
+sd = sd(dt$price)
+mean = mean(dt$price)
+p = ggplot(data = dt)+geom_density(aes(price))+stat_function(fun = dnorm, args = list(mean ,sd/2)) 
+p
+
+```
+
+
+
+
+
+```{r}
+
+library("rjson")
+all = fromJSON(file = "station_coordinates.json")
+stations = data.frame()
+for(i in 1:11){
+  l = as.data.frame(all[i])
+  colnames(l) = c("station" , "latitude", "longitude")
+  name = names(all[i])
+  line = data.frame( matrix(nrow = nrow(l), ncol = 1))
+  mORt = data.frame( matrix(nrow = nrow(l), ncol = 1))
+  for(j in 1:nrow(l)) {
+    line[j,1] = name
+    if(i<5) mORt[j, 1] = "Metro"
+    else mORt[j, 1] = "Tramway"
+  }
+  colnames(line) = c("line")
+  colnames(mORt) = c("type")
+  l = cbind(mORt,line, l)
+  if(i == 1){
+    stations = l
+  }else stations = rbind(stations, l)
+}
+
+```
+
+
+
+
+
+```{r}
+ggmap(map)+
+  geom_point(
+    data = dt,
+    mapping = aes(x = longitude, y = latitude, color = price)
+  )+scale_color_gradient(low="blue", high="red")+
+  geom_point(
+    data = stations ,     
+    mapping = aes(x = longitude, y = latitude),
+    size = 3,
+    color='yellow')
+```
+
+
+
+
+
+
+```{r}
+model <- lm( surface_housing ~ rooms_count, data = dt)
+summary(model)
+
+
+```
+
+
+
+
+
+```{r}
+
+price_data <-data.frame(dt$type_property , dt$type_purchase , dt$rooms_count , dt$surface_housing , dt$parkings_count , dt$price)
+price_data$dt.type_purchase = as.vector(price_data$dt.type_purchase)
+price_data$dt.type_property = as.vector(price_data$dt.type_property)
+price_data$dt.type_property[price_data$dt.type_property=='maison'] = 0
+price_data$dt.type_property[price_data$dt.type_property=='appartement'] = 1
+price_data$dt.type_purchase[price_data$dt.type_purchase=='VEFA'] = 0
+price_data$dt.type_purchase[price_data$dt.type_purchase=='ancien'] = 1
+price_data$dt.type_purchase = as.numeric(price_data$dt.type_purchase)
+price_data$dt.type_property = as.numeric(price_data$dt.type_property)
+
+reg_model = lm(price_data$dt.price ~. , data=price_data)
+summary(reg_model)
+
+```
+
+
+```{r}
+
+cor(price_data$dt.surface_housing , dt$price)
+cor(price_data$dt.rooms_count  , dt$price)
+cor(price_data$dt.parkings_count  , dt$price)
+cor(price_data$dt.type_property  , dt$price)
+cor(price_data$dt.type_purchase  , dt$price)
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######buy house
+
+
+```{r}
+house = filter(dt,dt$rooms_count<2)
+house = filter(house , house$parkings_count==0)
+house = filter(house , house$surface_housing<mean(house$surface_housing))
+house = filter(house , house$price<mean(house$price))
+nrow(house)
+
+```
+
+
+
+```{r}
+stations$line = as.factor(stations$line)
+ggmap(map)+
+  geom_point(
+    data = house,
+    mapping = aes(x = longitude, y = latitude, color = price)
+  )+scale_color_gradient(low="blue", high="red")+
+  geom_point(
+    data = stations ,     
+    mapping = aes(x = longitude, y = latitude ),
+    size = 3)+
+  geom_point(
+    data = stations ,     
+    mapping = aes(x = 4.865561717882041, y = 45.78023113880425),
+    size = 4,
+    color='green')
+
+```
